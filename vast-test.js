@@ -36,10 +36,36 @@ function recttest() {
 	_( r instanceof Rect );
 }
 
-r = new Rect(new Point(10,11), new Vect(81,31));
-for (i in [0,1,2,3]) {
-	_(r.quadrant(i));
+r = new Rect(new Point(0,0), new Vect(512,512));
+q = new Quadtree(r);
+for (var i = 1; i < 3000; i++) {
+	q.add(new Point(_randInt(q.r.v.w),_randInt(q.r.v.h)));
 }
 
+var canvas = document.getElementById('quadtree');  
+if (canvas.getContext){  
+	var ctx = canvas.getContext('2d');  
+	ctx.lineWidth = 1;
+	ctx.strokeStyle = "#000";
+	drawqt(q,ctx);
+}
 
-
+function drawqt(q,ctx) {
+	for (var i in [0,1,2,3]) {
+		r = q.tree[i];
+		if (r instanceof Quadtree) {
+			rgn = r.r;
+			ctx.fillStyle = "rgba(0,0,255,.1)";
+			ctx.fillRect(rgn.o.x, rgn.o.y, rgn.v.w, rgn.v.h);
+			ctx.fillStyle = "rgb(0,0,0)";
+			drawqt(r,ctx);
+		} else {
+			for (var j = 0; j<r.length;j++) {
+				p = r[j];
+				ctx.fillStyle = "rgb(0,0,0)";
+				ctx.fillRect(p.x-1,p.y,3,1);
+				ctx.fillRect(p.x,p.y-1,1,3);
+			}
+		}
+	}
+}

@@ -33,7 +33,6 @@ Vect.prototype = {
 	}
 };
 
-
 /**
  *	Rectangle primitive
  */
@@ -58,9 +57,12 @@ Rect.prototype = {
 	quadrant : function (n) {
 		var w = ((n % 2) ? Math.floor : Math.ceil).call(this,this.v.w/2);
 		var h = ((n >> 1) ? Math.floor : Math.ceil).call(this,this.v.h/2);
-		var x = (n % 2) * Math.ceil(this.v.w/2);
-		var y = (n >> 1) * Math.ceil(this.v.h/2);
+		var x = (n % 2) * Math.ceil(this.v.w/2) + this.o.x;
+		var y = (n >> 1) * Math.ceil(this.v.h/2) + this.o.y;
 		return new Rect(new Point(x,y), new Vect(w,h));
+	},
+	boundsPoint : function (_p) {
+		return _p.x >= this.p(0).x && _p.x <= this.p(3).x && _p.y >= this.p(0).y && _p.y <= this.p(3);
 	}
 };
 
@@ -69,24 +71,61 @@ Rect.prototype = {
  *	Quadtree primitive
  */
 function Quadtree (_r, _cfg) {
+	_cfg = _cfg || {};
 	this.r = _r;
 	this.maxNodes = _cfg.maxNodes || QUADTREE_MAX_POINTS;
 	this.maxDepth = _cfg.maxDepth || QUADTREE_MAX_DEPTH;
 	this.minSize = _cfg.minSize || QUADTREE_MIN_SIZE;
+	this.parent = _cfg.parent || false;
+	this.depth = this.parent ? this.parent.depth + 1 : 0;
 	this.tree = [[],[],[],[]];
 }
 Quadtree.prototype = {
 	inQuadrant : function (_p) {
-		return ((_p.x < Math.ceil(r.v.w/2)) ? 0 : 1) + ((_p.y < Math.ceil(r.v.h/2)) ? 0 : 2);
+		return ((_p.x < Math.ceil(this.r.o.x+this.r.v.w/2)) ? 0 : 1) + ((_p.y < Math.ceil(this.r.o.y+this.r.v.h/2)) ? 0 : 2);
 	},
-	add : function () {}
+	add : function (_p) {
+		_p = _arr(_p);
+		for (var i = 0; i < _p.length; i++) {
+			var p = _p[i];
+			var idx = this.inQuadrant(p);
+			var t = this.tree;
+			if (t[idx] instanceof Array) {
+				t[idx].push(p);
+				if (t[idx].length > this.maxNodes && this.depth < QUADTREE_MAX_DEPTH && (this.r.v.w >= this.minSize.w * 2) && (this.r.v.h >= this.minSize.h * 2)) {
+					var bin = t[idx];
+					t[idx] = new Quadtree(this.r.quadrant(idx),{parent:this});
+					t[idx].add(bin);
+				}
+			} else {
+				t[idx].add(p);
+			}
+		}
+	}
 };
+
+
+/**
+ *	Utilities
+ */
+
+function _arr(a) {
+	return (a.push) ? a : [a];
+}
+
+function _getRandomInt(min, max) {  
+	return Math.floor(Math.random() * (max - min + 1)) + min;  
+}
+
+function _randInt(n) {
+	return _getRandomInt(0,n-1);
+}
 
 
 /**
  *	Environment constants
  */
-QUADTREE_MAX_POINTS = 1;
+QUADTREE_MAX_POINTS = 8;
 QUADTREE_MAX_DEPTH = 8;
 QUADTREE_MIN_SIZE = new Vect(1,1);
 
